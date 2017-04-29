@@ -1,0 +1,62 @@
+#!/usr/bin/python3
+
+import defaults
+import json
+import logging
+import os.path
+import re
+import requests
+import telnetlib
+import sseclient
+
+
+class Config(dict):
+    def load_from_json(self, path):
+        with open(path) as f:
+            self.update(json.load(f))
+
+
+def update_rds(track):
+    naughty_word_re = re.compile(
+        r'shit|piss|fuck|cunt|cocksucker|tits|twat|asshole',
+        re.IGNORECASE)
+    for k, v in track.items():
+        if type(v) == str:
+            track[k] = naughty_word_re.sub('****', v)
+
+    tn = telnetlib.Telnet(config['TELNET_SERVER'], config['TELNET_PORT'])
+    tn.write('RT={artist} - {title} [DJ: {dj}]\n'.format(**track).encode(
+        'utf-8'))
+    tn.read_all()
+    tn.close()
+
+
+if __name__ == '__main__':
+    config = Config()
+    config.load_from_object(defaults)
+
+    config_path = os.environ.get('APP_CONFIG_PATH', 'config.json')
+    if os.path.exists(config_path):
+        config.load_from_json(config_path)
+
+    logger = logging.getLogger(__name__)
+
+    r = requests.get(config['TRACK_URL'])
+    if r.status_code == 200:
+        try:
+            update_rds(r.json())
+        except Exception as e:
+            logger.warning("Failed to set initial radio text: {}".format(e))
+
+    messages = sseclient.SSEClient(config['LIVE_URL'])
+    for msg in messages:
+        try:
+            data = json.loads(msg.data)
+            if data['event'] == 'track_change':
+                track = data['tracklog']['track']
+                update_rds(track)
+            elif data['event'] == 'track_edit':
+                track = data['tracklog']['track']
+                update_rds(track)
+        except Exception as e:
+            logger.warning("Failed to process message: {}".format(e))
