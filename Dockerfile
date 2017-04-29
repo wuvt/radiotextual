@@ -9,4 +9,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /usr/src/app/
 
 USER nobody
-CMD ["python", "/usr/src/app/metadater.py"]
+CMD ["python", "/usr/src/app/radiotextual.py"]
