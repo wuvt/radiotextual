@@ -31,10 +31,9 @@ def update_rds(track):
 
     with Telnet(host=config['TELNET_SERVER'], port=config['TELNET_PORT'],
                 timeout=config['TELNET_TIMEOUT']) as tn:
-        tn.read_all()
+        tn.read_lazy()
         tn.write('RT={artist} - {title} [DJ: {dj}]\n'.format(**track).encode(
             'utf-8'))
-        tn.read_all()
 
 
 if __name__ == '__main__':
