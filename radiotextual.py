@@ -7,6 +7,7 @@ import os.path
 import re
 import requests
 import sseclient
+import unidecode
 from telnetlib import Telnet
 
 
@@ -32,6 +33,7 @@ class RDSUpdater(Telnet):
     def set_track(self, track, is_retry=False):
         for k, v in track.items():
             if type(v) == str:
+                v = unidecode.unidecode(v)
                 track[k] = self.naughty_word_re.sub('****', v)
 
         try:
