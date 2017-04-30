@@ -33,7 +33,7 @@ def update_rds(track):
                 timeout=config['TELNET_TIMEOUT']) as tn:
         tn.read_lazy()
         tn.write('RT={artist} - {title} [DJ: {dj}]\n'.format(**track).encode(
-            'utf-8'))
+            'ascii', 'replace'))
 
 
 if __name__ == '__main__':
