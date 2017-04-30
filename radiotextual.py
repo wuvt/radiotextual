@@ -35,7 +35,7 @@ def update_rds(track):
         tn.write('RT={artist} - {title} [DJ: {dj}]\n'.format(**track).encode(
             'ascii', 'replace'))
         logger.warning(tn.read_until(
-            b'\n\r', timeout=config['TELNET_TIMEOUT']).decode('ascii'))
+            b'\n\r', timeout=config['TELNET_TIMEOUT']).decode('ascii').strip())
 
 
 if __name__ == '__main__':
