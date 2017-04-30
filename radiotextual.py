@@ -29,7 +29,9 @@ def update_rds(track):
         if type(v) == str:
             track[k] = naughty_word_re.sub('****', v)
 
-    with Telnet(config['TELNET_SERVER'], config['TELNET_PORT']) as tn:
+    with Telnet(host=config['TELNET_SERVER'], port=config['TELNET_PORT'],
+                timeout=config['TELNET_TIMEOUT']) as tn:
+        tn.read_all()
         tn.write('RT={artist} - {title} [DJ: {dj}]\n'.format(**track).encode(
             'utf-8'))
         tn.read_all()
