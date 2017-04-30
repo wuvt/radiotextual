@@ -62,13 +62,13 @@ if __name__ == '__main__':
             data = json.loads(msg.data)
             if data['event'] == 'track_change':
                 track = data['tracklog']['track']
-                logger.info("Track change: {track}".format(track=track))
-
                 track['dj'] = data['tracklog']['dj']
+                logger.warning("Track change: {track}".format(track=track))
                 update_rds(track)
             elif data['event'] == 'track_edit':
                 track = data['tracklog']['track']
                 track['dj'] = data['tracklog']['dj']
+                logger.warning("Track edit: {track}".format(track=track))
                 update_rds(track)
         except Exception as e:
             logger.warning("Failed to process message: {}".format(e))
