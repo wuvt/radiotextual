@@ -62,6 +62,8 @@ if __name__ == '__main__':
             data = json.loads(msg.data)
             if data['event'] == 'track_change':
                 track = data['tracklog']['track']
+                logger.info("Track change: {track}".format(track=track))
+
                 track['dj'] = data['tracklog']['dj']
                 update_rds(track)
             elif data['event'] == 'track_edit':
