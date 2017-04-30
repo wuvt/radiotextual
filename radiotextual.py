@@ -30,12 +30,24 @@ class RDSUpdater(Telnet):
             r'shit|piss|fuck|cunt|cocksucker|tits|twat|asshole',
             re.IGNORECASE)
 
+    def reconnect(self):
+        self.open(self.host, self.port, self.timeout)
+        self.banner = self.read_until(b'\n\r', timeout=self.timeout)
+
+    def check_timeout(self):
+        output = self.read_eager()
+        if output[:39] == b"Terminal activity time-out of 4 minutes":
+            logger.warning(output.decode('ascii').strip())
+            self.close()
+            self.reconnect()
+
     def set_track(self, track, is_retry=False):
         for k, v in track.items():
             if type(v) == str:
                 v = unidecode.unidecode(v)
                 track[k] = self.naughty_word_re.sub('****', v)
 
+        self.check_timeout()
         try:
             self.write(
                 'RT={artist} - {title} [DJ: {dj}]\n'.format(**track).encode(
@@ -43,9 +55,16 @@ class RDSUpdater(Telnet):
             logger.warning(self.read_until(
                 b'\n\r', timeout=self.timeout).decode('ascii').strip())
         except (OSError, EOFError):
-            self.open(self.host, self.port, self.timeout)
+            self.reconnect()
             if not is_retry:
                 self.set_track(track, is_retry=True)
+
+    def keepalive(self):
+        self.check_timeout()
+        try:
+            self.write(b'\n')
+        except (OSError, EOFError):
+            self.reconnect()
 
 
 if __name__ == '__main__':
@@ -82,5 +101,7 @@ if __name__ == '__main__':
                     track['dj'] = data['tracklog']['dj']
                     logger.warning("Track edit: {track}".format(track=track))
                     rds.set_track(track)
+                else:
+                    rds.keepalive()
             except ValueError as e:
                 logger.warning("Failed to process message: {}".format(e))
