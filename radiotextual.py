@@ -6,8 +6,8 @@ import logging
 import os.path
 import re
 import requests
-import telnetlib
 import sseclient
+from telnetlib import Telnet
 
 
 class Config(dict):
@@ -29,11 +29,10 @@ def update_rds(track):
         if type(v) == str:
             track[k] = naughty_word_re.sub('****', v)
 
-    tn = telnetlib.Telnet(config['TELNET_SERVER'], config['TELNET_PORT'])
-    tn.write('RT={artist} - {title} [DJ: {dj}]\n'.format(**track).encode(
-        'utf-8'))
-    tn.read_all()
-    tn.close()
+    with Telnet(config['TELNET_SERVER'], config['TELNET_PORT']) as tn:
+        tn.write('RT={artist} - {title} [DJ: {dj}]\n'.format(**track).encode(
+            'utf-8'))
+        tn.read_all()
 
 
 if __name__ == '__main__':
