@@ -11,6 +11,11 @@ import sseclient
 
 
 class Config(dict):
+    def load_from_object(self, obj):
+        for key in dir(obj):
+            if key.isupper():
+                self[key] = getattr(obj, key)
+
     def load_from_json(self, path):
         with open(path) as f:
             self.update(json.load(f))
