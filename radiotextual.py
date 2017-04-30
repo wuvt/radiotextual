@@ -21,21 +21,29 @@ class Config(dict):
             self.update(json.load(f))
 
 
-def update_rds(track):
-    naughty_word_re = re.compile(
-        r'shit|piss|fuck|cunt|cocksucker|tits|twat|asshole',
-        re.IGNORECASE)
-    for k, v in track.items():
-        if type(v) == str:
-            track[k] = naughty_word_re.sub('****', v)
+class RDSUpdater(Telnet):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.banner = self.read_until(b'\n\r', timeout=self.timeout)
+        self.naughty_word_re = re.compile(
+            r'shit|piss|fuck|cunt|cocksucker|tits|twat|asshole',
+            re.IGNORECASE)
 
-    with Telnet(host=config['TELNET_SERVER'], port=config['TELNET_PORT'],
-                timeout=config['TELNET_TIMEOUT']) as tn:
-        tn.read_until(b'\n\r', timeout=config['TELNET_TIMEOUT'])
-        tn.write('RT={artist} - {title} [DJ: {dj}]\n'.format(**track).encode(
-            'ascii', 'replace'))
-        logger.warning(tn.read_until(
-            b'\n\r', timeout=config['TELNET_TIMEOUT']).decode('ascii').strip())
+    def set_track(self, track, is_retry=False):
+        for k, v in track.items():
+            if type(v) == str:
+                track[k] = self.naughty_word_re.sub('****', v)
+
+        try:
+            self.write(
+                'RT={artist} - {title} [DJ: {dj}]\n'.format(**track).encode(
+                    'ascii', 'replace'))
+            logger.warning(self.read_until(
+                b'\n\r', timeout=self.timeout).decode('ascii').strip())
+        except (OSError, EOFError):
+            self.open(self.host, self.port, self.timeout)
+            if not is_retry:
+                self.set_track(track, is_retry=True)
 
 
 if __name__ == '__main__':
@@ -48,27 +56,29 @@ if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
 
-    r = requests.get(config['TRACK_URL'],
-                     headers={"Accept": "application/json"})
-    if r.status_code == 200:
+    with RDSUpdater(host=config['TELNET_SERVER'], port=config['TELNET_PORT'],
+                    timeout=config['TELNET_TIMEOUT']) as rds:
         try:
-            update_rds(r.json())
+            r = requests.get(config['TRACK_URL'],
+                             headers={"Accept": "application/json"})
+            r.raise_for_status()
+            rds.set_track(r.json())
         except Exception as e:
-            logger.warning("Failed to set initial radio text: {}".format(e))
+            logger.warning("Failed to set initial radiotext: {}".format(e))
 
-    messages = sseclient.SSEClient(config['LIVE_URL'])
-    for msg in messages:
-        try:
-            data = json.loads(msg.data)
-            if data['event'] == 'track_change':
-                track = data['tracklog']['track']
-                track['dj'] = data['tracklog']['dj']
-                logger.warning("Track change: {track}".format(track=track))
-                update_rds(track)
-            elif data['event'] == 'track_edit':
-                track = data['tracklog']['track']
-                track['dj'] = data['tracklog']['dj']
-                logger.warning("Track edit: {track}".format(track=track))
-                update_rds(track)
-        except Exception as e:
-            logger.warning("Failed to process message: {}".format(e))
+        messages = sseclient.SSEClient(config['LIVE_URL'])
+        for msg in messages:
+            try:
+                data = json.loads(msg.data)
+                if data['event'] == 'track_change':
+                    track = data['tracklog']['track']
+                    track['dj'] = data['tracklog']['dj']
+                    logger.warning("Track change: {track}".format(track=track))
+                    rds.set_track(track)
+                elif data['event'] == 'track_edit':
+                    track = data['tracklog']['track']
+                    track['dj'] = data['tracklog']['dj']
+                    logger.warning("Track edit: {track}".format(track=track))
+                    rds.set_track(track)
+            except ValueError as e:
+                logger.warning("Failed to process message: {}".format(e))
