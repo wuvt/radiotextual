@@ -46,7 +46,8 @@ if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
 
-    r = requests.get(config['TRACK_URL'])
+    r = requests.get(config['TRACK_URL'],
+                     headers={"Accept": "application/json"})
     if r.status_code == 200:
         try:
             update_rds(r.json())
@@ -59,9 +60,11 @@ if __name__ == '__main__':
             data = json.loads(msg.data)
             if data['event'] == 'track_change':
                 track = data['tracklog']['track']
+                track['dj'] = data['tracklog']['dj']
                 update_rds(track)
             elif data['event'] == 'track_edit':
                 track = data['tracklog']['track']
+                track['dj'] = data['tracklog']['dj']
                 update_rds(track)
         except Exception as e:
             logger.warning("Failed to process message: {}".format(e))
