@@ -47,11 +47,12 @@ class RDSUpdater(Telnet):
                 v = unidecode.unidecode(v)
                 track[k] = self.naughty_word_re.sub('****', v)
 
+        radiotext = "{artist} - {title} [DJ: {dj}]".format(**track)[:128]
+
         self.check_timeout()
         try:
             self.write(
-                'RT={artist} - {title} [DJ: {dj}]\n'.format(**track).encode(
-                    'ascii', 'replace'))
+                'RT={0}\n'.format(radiotext).encode('ascii', 'replace'))
             logger.warning(self.read_until(
                 b'\n\r', timeout=self.timeout).decode('ascii').strip())
         except (OSError, EOFError):
