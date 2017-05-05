@@ -88,7 +88,7 @@ if __name__ == '__main__':
         except Exception as e:
             logger.warning("Failed to set initial radiotext: {}".format(e))
 
-        messages = sseclient.SSEClient(config['LIVE_URL'], chunk_size=16)
+        messages = sseclient.SSEClient(config['LIVE_URL'], chunk_size=1)
         for msg in messages:
             try:
                 data = json.loads(msg.data)
