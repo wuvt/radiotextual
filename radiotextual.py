@@ -106,7 +106,11 @@ if __name__ == '__main__':
                     rds.keepalive()
 
                 if len(config['HEALTHCHECK_WEBHOOK']) > 0:
-                    r = requests.get(config['HEALTHCHECK_WEBHOOK'],
-                                     timeout=config['REQUEST_TIMEOUT'])
+                    try:
+                        r = requests.get(config['HEALTHCHECK_WEBHOOK'],
+                                         timeout=config['REQUEST_TIMEOUT'])
+                    except requests.exceptions.RequestException as e:
+                        logger.warning(
+                            "Healthcheck webhook failed: {}".format(e))
             except ValueError as e:
                 logger.warning("Failed to process message: {}".format(e))
